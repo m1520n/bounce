@@ -1,0 +1,314 @@
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Bounce</title>
+        <style>
+            * { padding: 0; margin: 0; }
+            canvas { background: #27ae60; display: block; margin: 0 auto; }
+        </style>
+    </head>
+    <body>
+        <input id="gravity" type="number" min="0.1" max="10" value=0.8 onchange="changevalues()">
+        <input id="bounceFactor" type="number" min="0.1" max="1" value=0.7 onchange="changevalues()">
+        <canvas id="MyCanvas"></canvas>
+        <script>
+
+        //CANVAS VARIABLES
+            var canvas = document.getElementById("MyCanvas");
+            var ctx = canvas.getContext("2d");
+            canvas.width = window.innerWidth*0.8;
+            canvas.height = window.innerHeight*0.8;
+
+            var x = canvas.width / 2;
+            var y = 100;
+
+        //setup
+            var stats = true; //display stats - on/off
+
+        //PI var for convenience
+            var pi = Math.PI;
+
+            var bird = new Image();
+            bird.src = "mini.png";
+
+        // platforms generator
+            function platform() {
+                this.x = canvas.height-50;
+                this.y = canvas.width/3;
+                this.height = 100;
+                this.width = 50;
+                this.draw = function(ctx) {
+                    ctx.fillStyle = "#fff";
+                    ctx.beginPath();
+                    ctx.rect(
+                        this.x,
+                        this.y,
+                        this.height,
+                        this.width
+                    );
+
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            }
+
+            function collisionDetection() {
+                //if (ball.x > platform.x && ball.x < platform.x + ball.radius && ball.y > platform.y && ball.y < platform.y + ball.radius) { physics.vx = -physics.vx; }
+                //if (ball.y > platform.y && ball.y < platform.y + ball.radius) { physics.vy = -physics.vy; }
+            }
+
+        //ball properties
+            var ballColor = "#27ae60"; //getRandomColor();
+            var ballRadius = 20;
+
+        //ball-cursor distance
+            var distance = 0;
+            var angle = 0;
+
+        function changevalues() {
+             physics.g = parseFloat(document.getElementById("gravity").value);
+             physics.bounceFactor = parseFloat(document.getElementById("bounceFactor").value);
+        }
+        //physics object
+            var physics = {
+                g: 0.8,
+                vx: getRandomArbitrary(-10,10),
+                vy: getRandomArbitrary(-10,10),
+                bounceFactor: 0.7,
+                frictionX: .005,
+                frictionY: .00001,
+                rollingFriction: .98
+            };
+
+        //sound object
+            var sounds = {
+                ball: "ball.m4a",
+                background: "bgd.mp3",
+                glass: "glass.m4a"
+            };
+
+            var ballSound = new Audio(sounds.ball); //initialize audio object
+
+        //EVENT LISTENERS FOR INPUT DEVICES
+            document.addEventListener("mousemove", mouseMoveHandler, false);
+            document.addEventListener("mousedown", mouseClickHandler, false);
+
+            document.addEventListener("keydown", keyDownHandler, false);
+            document.addEventListener("keyup", keyUpHandler, false);
+
+            document.addEventListener("touchstart", touchHandler, false);
+
+        //MOUSE HANDLING
+            function mouseMoveHandler(e) {
+                x = e.clientX - canvas.offsetLeft;
+                y = e.clientY - canvas.offsetTop;
+            }
+
+            function touchHandler(e) {
+
+                e.preventDefault();
+
+                x = e.targetTouches[0].pageX;
+                y = e.targetTouches[0].pageY;
+                mouseClickHandler(e);
+            }
+
+            function mouseClickHandler(e) {
+            //when clicked the vy should increase in the upward direction multipled by some factor including the distance
+                //physics.vy = Math.abs(physics.vy)*(-(1+(canvas.height/y)/50));
+                physics.vy += 10 * (1+(distance/canvas.height));
+
+                if (angle < 0) {
+                    physics.vx -= 10 * (1+(distance/canvas.width));
+                } else if (angle > 0) {
+                    physics.vx += 10 * (1+(distance/canvas.width));
+                }
+            }
+
+
+            function angleBetweenPointerAndBall() {
+                var sin = (x - ball.x)/distance;
+                angle  = Math.asin(sin) * (180 / pi);
+            }
+
+        //KEY HANDLING
+            var upPressed = false;
+            var leftPressed = false;
+            var rightPressed = false;
+
+            function keyDownHandler(e) {
+                if (e.keyCode == 38) {
+                    upPressed = true;
+                } else if (e.keyCode == 37) {
+                    leftPressed = true;
+                } else if (e.keyCode == 39) {
+                    rightPressed = true;
+                }
+            }
+
+            function keyUpHandler(e) {
+                if (e.keyCode == 38) {
+                    upPressed = false;
+                } else if (e.keyCode == 37) {
+                    leftPressed = false;
+                } else if (e.keyCode == 39) {
+                    rightPressed = false;
+                }
+            }
+
+        //calculating the distance from ball center to the cursor - it is used to calculate the force of jumping when clicked
+            function ballCursorDistance() {
+                distance = Math.floor(Math.sqrt(Math.pow((x-ball.x),2)+Math.pow((y-ball.y),2))); //distance from
+                return distance;
+            }
+
+        //RANDOM NUMBER FOR X,Y VELOCITY
+            function getRandomArbitrary(min, max) {
+                return Math.random() * (max - min) + min;
+            }
+
+        //RANDOM COLOR
+            function getRandomColor() {
+                var letters = '0123456789ABCD'.split('');
+                var color = '#';
+                for (var i = 0; i < 6; i++ ) {
+                    color += letters[Math.floor(Math.random() * 16)];
+                }
+                return color;
+            }
+
+            //DRAW STATISTICS
+            function drawStats() {
+                ctx.font = "14px Arial";
+                ctx.fillStyle = "#fff";
+                ctx.fillText("Gravity: " + physics.g, 20, 20);
+                ctx.fillText("bounce factor: " + physics.bounceFactor, 20, 40);
+                ctx.fillText("x friction: " + physics.frictionX, 20, 60);
+                ctx.fillText("y friction: " + physics.frictionY, 20, 80);
+                ctx.fillText("rolling friction: " + physics.rollingFriction, 20, 100);
+                ctx.fillText("x velocity: " + physics.vx, 20, 120);
+                ctx.fillText("y velocity: " + physics.vy, 20, 140);
+                ctx.fillText("x: " + x, 20, 160);
+                ctx.fillText("y: " + y, 20, 180);
+                ctx.fillText("ball x: " + ball.x, 20, 200);
+                ctx.fillText("ball y: " + ball.y, 20, 220);
+                ctx.fillText("distance [px]: " + distance, 20, 240);
+                ctx.fillText("angle [deg.]: " + angle, 20, 260);
+            }
+
+
+            function Bounce() {
+                //bounce from floor
+                if (ball.y + ball.radius > canvas.height) {
+                    ball.y = canvas.height - ball.radius; //reposition the ball if it goes outside the boundries
+                    physics.vy = -physics.vy * physics.bounceFactor; // reverse the direction
+                    //physics.vy = physics.vy - (physics.vy * physics.frictionY);
+
+                    //play sound
+                    ballSound.currentTime = 0;
+                    ballSound.play();
+                }
+
+                //bounce form left wall
+                if (ball.x + ball.radius < 0) {
+                    ball.x = 0 + ball.radius;
+                    physics.vx = -physics.vx * physics.bounceFactor; //revesce direction
+
+                    ballSound.currentTime = 0;
+                    ballSound.play();
+                }
+                //bounce from right wall
+                if (ball.x + ball.radius > canvas.width) {
+                    ball.x = canvas.width - ball.radius;
+                    physics.vx = -physics.vx * physics.bounceFactor;
+
+                    ballSound.currentTime = 0;
+                    ballSound.play();
+                }
+
+                //rolling friction
+                if (physics.vy < 1) {
+                    physics.vx *= physics.rollingFriction;
+                }
+            }
+
+            function Ball() {
+                this.radius = ballRadius;
+                this.x = x;
+                this.y = y;
+                this.draw = function(ctx) {
+                    ctx.fillStyle = ballColor;
+                    ctx.beginPath();
+
+                    ctx.arc(
+                        this.x,
+                        this.y,
+                        this.radius,
+                        0,
+                        pi*2,
+                        false
+                    );
+
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.drawImage(bird, this.x-this.radius-25, this.y-this.radius-60);
+                }
+            }
+
+            var ball = new Ball();
+            var platform = new platform();
+
+            function draw() {
+                //frame loop
+                requestAnimationFrame(draw);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                //gravity
+                physics.vy += physics.g;
+
+                //velocity
+                ball.x += physics.vx;
+                ball.y += physics.vy;
+
+                //collision detection
+                Bounce();
+
+                //key press detections
+                if (upPressed) {
+                    if (Math.abs(physics.vy) < 0.5 ) {
+                        physics.vy = 10;
+                    } else {
+                    physics.vy *= 1.1;
+                    };
+                    if (physics.vy < - 25) physics.vy = -25;
+                };
+
+                if (leftPressed) {
+                    physics.vx = Math.abs(physics.vx)*(-1.1);
+                    if (physics.vx < -25) physics.vx = -25;
+                };
+
+                if (rightPressed) {
+                    physics.vx = Math.abs(physics.vx)*1.1;
+                    if (physics.vx > 25) physics.vx = 25;
+                };
+
+                Math.floor(physics.xv);
+                Math.round(physics.xy);
+
+                ball.draw(ctx);
+                collisionDetection();
+                //platform.draw(ctx);
+
+                ballCursorDistance();
+                angleBetweenPointerAndBall();
+                //draw statistics
+                if (stats) drawStats();
+            }
+
+            draw();
+
+        </script>
+
+    </body>
+</html>
